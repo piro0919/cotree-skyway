@@ -123,13 +123,13 @@ function Video({
   return (
     <div>
       <video
-        muted={true}
+        muted={process.env.NODE_ENV === "development"}
         ref={localVideoRef}
         width="400px"
         playsInline={true}
       />
       <video
-        muted={true}
+        muted={process.env.NODE_ENV === "development"}
         ref={remoteVideoRef}
         width="400px"
         playsInline={true}
