@@ -45,41 +45,10 @@ function Chat({
     },
     [dataConnection, setValue]
   );
-
-  useEffect(() => {
-    if (!peer || !peer.open || !remoteId) {
-      return;
-    }
-
-    const dataConnection = peer.connect(remoteId);
-
-    dataConnection.once("open", async () => {
-      setMessages(
-        (prevMessages) =>
-          `${prevMessages}=== DataConnection has been opened ===\n`
-      );
-    });
-
-    dataConnection.on("data", (data) => {
-      setMessages((prevMessages) => `${prevMessages}Remote: ${data}\n`);
-    });
-
-    dataConnection.once("close", () => {
-      setMessages(
-        (prevMessages) =>
-          `${prevMessages}=== DataConnection has been closed ===\n`
-      );
-    });
-
-    setDataConnection(dataConnection);
-  }, [peer, remoteId, setDataConnection]);
-
-  useEffect(() => {
-    if (!peer) {
-      return;
-    }
-
-    peer.on("connection", (dataConnection) => {
+  const initizlizeDataConnection = useCallback<
+    (dataConnection: DataConnection) => void
+  >(
+    (dataConnection) => {
       dataConnection.once("open", async () => {
         setMessages(
           (prevMessages) =>
@@ -99,8 +68,29 @@ function Chat({
       });
 
       setDataConnection(dataConnection);
+    },
+    [setDataConnection]
+  );
+
+  useEffect(() => {
+    if (!peer || !peer.open || !remoteId) {
+      return;
+    }
+
+    const dataConnection = peer.connect(remoteId);
+
+    initizlizeDataConnection(dataConnection);
+  }, [initizlizeDataConnection, peer, remoteId]);
+
+  useEffect(() => {
+    if (!peer) {
+      return;
+    }
+
+    peer.on("connection", (dataConnection) => {
+      initizlizeDataConnection(dataConnection);
     });
-  }, [peer, setDataConnection]);
+  }, [initizlizeDataConnection, peer]);
 
   return (
     <div>

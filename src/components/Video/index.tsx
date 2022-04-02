@@ -1,4 +1,11 @@
-import { useRef, useState, useEffect, Dispatch, SetStateAction } from "react";
+import {
+  useRef,
+  useState,
+  useEffect,
+  Dispatch,
+  SetStateAction,
+  useCallback,
+} from "react";
 import Peer, { MediaConnection } from "skyway-js";
 
 export type VideoProps = {
@@ -17,88 +24,16 @@ function Video({
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const [localStream, setLocalStream] = useState<MediaStream>();
-
-  useEffect(() => {
-    if (!peer || !peer.open || !localStream || !remoteId) {
-      return;
-    }
-
-    const mediaConnection = peer.call(remoteId, localStream);
-
-    mediaConnection.on("stream", (stream) => {
-      if (!remoteVideoRef.current) {
-        return;
-      }
-
-      remoteVideoRef.current.srcObject = stream;
-      remoteVideoRef.current.play().catch(console.error);
-    });
-    mediaConnection.once("close", () => {
-      if (
-        !remoteVideoRef.current ||
-        !remoteVideoRef.current.srcObject ||
-        !("getTracks" in remoteVideoRef.current.srcObject)
-      ) {
-        return;
-      }
-
-      remoteVideoRef.current.srcObject
-        .getTracks()
-        .forEach((track) => track.stop());
-      remoteVideoRef.current.srcObject = null;
-    });
-
-    setMediaConnection(mediaConnection);
-  }, [localStream, peer, remoteId, setMediaConnection]);
-
-  useEffect(() => {
-    if (!localStream || !localVideoRef.current) {
-      return;
-    }
-
-    localVideoRef.current.srcObject = localStream;
-    localVideoRef.current
-      .play()
-      // .then(() => {
-      //   const peer = new Peer({
-      //     key: "3d67f156-917a-4260-bbfa-f9e81ff9f31a",
-      //     debug: 3,
-      //   });
-
-      //   setPeer(peer);
-      // })
-      .then(() => {
-        setEnabledPeer(true);
-      })
-      .catch(console.error);
-  }, [localStream, setEnabledPeer]);
-
-  useEffect(() => {
-    navigator.mediaDevices
-      .getUserMedia({
-        audio: true,
-        video: true,
-      })
-      .then((localStream) => {
-        setLocalStream(localStream);
-      })
-      .catch(console.error);
-  }, []);
-
-  useEffect(() => {
-    if (!peer) {
-      return;
-    }
-
-    peer.on("call", (mediaConnection) => {
-      mediaConnection.answer(localStream);
+  const initializeMediaConnection = useCallback<
+    (mediaConnection: MediaConnection) => void
+  >(
+    (mediaConnection) => {
       mediaConnection.on("stream", (stream) => {
         if (!remoteVideoRef.current) {
           return;
         }
 
         remoteVideoRef.current.srcObject = stream;
-
         remoteVideoRef.current.play().catch(console.error);
       });
       mediaConnection.once("close", () => {
@@ -117,8 +52,65 @@ function Video({
       });
 
       setMediaConnection(mediaConnection);
+    },
+    [setMediaConnection]
+  );
+
+  useEffect(() => {
+    navigator.mediaDevices
+      .getUserMedia({
+        audio: true,
+        video: true,
+      })
+      .then((localStream) => {
+        setLocalStream(localStream);
+      })
+      .catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    if (!localStream || !localVideoRef.current) {
+      return;
+    }
+
+    localVideoRef.current.srcObject = localStream;
+    localVideoRef.current
+      .play()
+      // .then(() => {
+      //   const peer = new Peer({
+      //     key: process.env.NEXT_PUBLIC_SKY_WAY_API_KEY,
+      //     debug: 3,
+      //   });
+
+      //   setPeer(peer);
+      // })
+      .then(() => {
+        setEnabledPeer(true);
+      })
+      .catch(console.error);
+  }, [localStream, setEnabledPeer]);
+
+  useEffect(() => {
+    if (!peer || !peer.open || !localStream || !remoteId) {
+      return;
+    }
+
+    const mediaConnection = peer.call(remoteId, localStream);
+
+    initializeMediaConnection(mediaConnection);
+  }, [initializeMediaConnection, localStream, peer, remoteId]);
+
+  useEffect(() => {
+    if (!peer) {
+      return;
+    }
+
+    peer.on("call", (mediaConnection) => {
+      mediaConnection.answer(localStream);
+
+      initializeMediaConnection(mediaConnection);
     });
-  }, [localStream, peer, setMediaConnection]);
+  }, [initializeMediaConnection, localStream, peer]);
 
   return (
     <div>
