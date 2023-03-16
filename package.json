@@ -5,7 +5,7 @@
     "react-dom": "18.0.0",
     "react-hook-form": "7.29.0",
     "sass": "1.49.11",
-    "skyway-js": "4.4.4"
+    "skyway-js": "4.4.5"
   },
   "devDependencies": {
     "@types/node": "17.0.23",
